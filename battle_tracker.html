@@ -1,0 +1,1412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BOTSE Battle Tracker</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 15px;
+            background-color: #f4f4f4;
+            color: #333;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        @supports (-webkit-touch-callout: none) {
+            body {
+                /* Use a fixed height for iOS Safari */
+                min-height: -webkit-fill-available;
+                -webkit-overflow-scrolling: touch; /* Add smooth scrolling for iOS */
+            }
+
+            #app {
+                max-height: -webkit-fill-available;
+            }
+        }
+
+        #app {
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 500px; /* Limit width for better mobile layout */
+        }
+
+        h1, h2 {
+            text-align: center;
+            color: #5a0f0f; /* Dark red theme */
+        }
+
+        .setup, .tracker-info, .controls, .adventurer-actions-container {
+            margin-bottom: 20px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+            .setup label, .setup select {
+                display: block;
+                margin-bottom: 10px;
+                font-size: 1.1em;
+            }
+
+            .setup select {
+                width: 100%;
+                padding: 8px;
+                border: 1px solid #ccc;
+                border-radius: 4px;
+                margin-bottom: 15px; /* Add space between dropdowns */
+            }
+
+            /* Styling for Button Groups in Setup */
+            .setup label { /* Style the labels above button groups */
+                display: block;
+                margin-bottom: 5px; /* Space between label and buttons */
+                margin-top: 15px; /* Space above label */
+                font-size: 1.1em;
+                font-weight: bold;
+                color: #555;
+            }
+
+        .button-group {
+            display: flex;
+            flex-wrap: wrap; /* Allow wrapping on small screens */
+            gap: 10px; /* Space between buttons */
+            margin-bottom: 20px; /* Space below group */
+        }
+
+        .option-button {
+            padding: 10px 15px;
+            font-size: 1em;
+            border: 2px solid #ccc; /* Default border */
+            border-radius: 5px;
+            background-color: #f0f0f0; /* Default background */
+            color: #333;
+            cursor: pointer;
+            transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+            flex-grow: 1; /* Allow buttons to grow to fill space if needed */
+            text-align: center;
+            /* Prevent iOS tap highlight */
+            -webkit-tap-highlight-color: transparent;
+        }
+
+            .option-button:hover {
+                background-color: #e0e0e0;
+                border-color: #bbb;
+            }
+
+            /* Style for the SELECTED button */
+            .option-button.selected {
+                background-color: #7a1f1f; /* Theme color */
+                border-color: #5a0f0f; /* Darker theme border */
+                color: white;
+                font-weight: bold;
+            }
+
+                .option-button.selected:hover {
+                    background-color: #5a0f0f; /* Maintain selected color on hover */
+                }
+
+        #start-battle-button { /* Style start button like others */
+            display: block;
+            width: 100%;
+            padding: 15px;
+            margin-top: 10px;
+            font-size: 1.2em;
+            cursor: pointer;
+            background-color: #7a1f1f;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            transition: background-color 0.2s ease;
+        }
+
+            #start-battle-button:hover {
+                background-color: #5a0f0f;
+            }
+
+        .tracker-info-flex {
+            display: flex;
+            justify-content: space-between; /* Push text left, button right */
+            align-items: flex-start; /* Align items to the top */
+            gap: 15px; /* Add some gap between left column and undo button */
+        }
+
+        .info-left-column {
+            display: flex;
+            flex-direction: column; /* Stack top row and phase */
+            flex-grow: 1; /* Allow it to take available space */
+        }
+
+        .info-top-row {
+            display: flex;
+            align-items: center; /* Vertically align Round block and Details */
+            margin-bottom: 10px; /* Space before phase */
+            width: 100%; /* Ensure it takes full width of its column */
+        }
+
+        .round-block {
+            display: flex;
+            flex-direction: column;
+            align-items: center; /* Center label and number horizontally */
+            justify-content: center; /* Center content vertically */
+            transition: background-color 0.3s ease, border-color 0.3s ease; /* Add transition */
+            background-color: #e9e9e9; /* Default background */
+            border: 1px solid #ccc;    /* Default border */
+            border-radius: 5px;
+            width: 70px; /* Adjust width */
+            height: 70px; /* Adjust height to match width for square */
+            padding: 5px;
+            box-sizing: border-box; /* Include padding/border in width/height */
+            flex-shrink: 0; /* Prevent shrinking */
+        }
+
+            .round-block.fatigue-round-active {
+                background-color: #f8d7da; /* Light red background (Bootstrap danger light) */
+                border-color: #dc3545; /* Red border (unavailable button color) */
+            }
+
+                .round-block.fatigue-round-active .round-block-label {
+                    color: #721c24; /* Darker red text for label */
+                }
+
+                .round-block.fatigue-round-active .round-block-number {
+                    color: #721c24; /* Darker red text for number */
+                }
+
+                    .round-block.fatigue-round-active .round-block-number.fatigue-icon {
+                        color: #dc3545; /* Make checkmark brighter red maybe */
+                    }
+
+        .round-block-label {
+            font-size: 0.75em;
+            color: #555;
+            margin-bottom: 2px;
+        }
+
+        .round-block-number {
+            font-size: 2.2em; /* Large font size for number */
+            font-weight: bold;
+            color: #333;
+            line-height: 1; /* Tighten line height */
+            /* Ensure the number span itself doesn't have conflicting styles */
+            background-color: transparent !important;
+            padding: 0 !important;
+            margin-left: 0 !important;
+        }
+            /* Specific style for the fatigue icon if needed */
+            .round-block-number.fatigue-icon {
+                font-size: 2.5em; /* Adjust size for checkmark maybe */
+            }
+
+        .details-block {
+            margin-left: 15px; /* Space between round block and details */
+            flex-grow: 1; /* Allow it to take remaining space */
+        }
+
+            .details-block p {
+                margin: 3px 0; /* Adjust vertical spacing */
+                font-size: 0.9em; /* Slightly smaller maybe */
+                text-align: left;
+                font-weight: normal;
+            }
+
+                .details-block p span {
+                    font-weight: bold;
+                    background-color: #e9e9e9;
+                    padding: 1px 4px;
+                    border-radius: 3px;
+                    margin-left: 5px;
+                    text-transform: capitalize;
+                }
+
+        .tracker-info p {
+            margin: 5px 0;
+            font-size: 1.1em;
+            text-align: center;
+            font-weight: bold;
+        }
+
+        .info-text-block p {
+            margin: 2px 0; /* Tighter spacing */
+            font-size: 1em; /* Slightly smaller info text */
+            text-align: left; /* Align text block left */
+            font-weight: normal; /* Normal weight for info lines */
+        }
+
+            .info-text-block p span { /* Style for the value spans */
+                font-weight: bold; /* Make values bold */
+                background-color: #e9e9e9;
+                padding: 1px 4px;
+                border-radius: 3px;
+                margin-left: 5px;
+                text-transform: capitalize;
+            }
+
+        .phase-heading {
+            font-size: 1.2em !important;
+            font-weight: bold !important;
+            margin-top: 8px !important;
+            text-align: center !important;
+            color: #5a0f0f !important;
+            border-top: 1px solid #eee;
+            padding-top: 6px;
+            width: 100%; /* Ensure it spans the left column */
+            box-sizing: border-box;
+        }
+
+            .phase-heading span {
+                background-color: transparent !important;
+                font-weight: bold !important;
+                padding: 0 !important;
+                margin-left: 0 !important;
+            }
+
+        /* Adjust spacing on the element that was previously last */
+        .info-text-block p#mode-display { /* Target the new last element */
+            margin-bottom: 6px; /* Add space below it before the phase heading border */
+        }
+
+        .info-button-block {
+            flex-shrink: 0; /* Prevent undo button block from shrinking */
+        }
+
+        .info-undo-button { /* Style for the moved Undo button */
+            padding: 12px 8px;
+            font-size: 1em;
+            cursor: pointer;
+            background-color: #6c757d; /* Grey */
+            color: white;
+            border: none;
+            border-radius: 5px;
+            line-height: 1.3;
+            transition: background-color 0.2s ease, color 0.2s ease;
+            aspect-ratio: 1 / 0.8;
+            width: 120px;
+            height: 140px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+            .info-undo-button:hover {
+                background-color: #5a6268;
+                opacity: 1;
+            }
+
+            .info-undo-button:disabled {
+                background-color: #ccc;
+                cursor: not-allowed;
+                opacity: 0.6;
+            }
+            /* Ensure the span inside undo button doesn't prevent hover */
+            .info-undo-button span {
+                pointer-events: none;
+            }
+
+        #round-display span, #phase-display span, #difficulty-display span, #mode-display span {
+            font-weight: normal;
+            background-color: #e9e9e9;
+            padding: 2px 6px;
+            border-radius: 4px;
+            text-transform: capitalize; /* Nicer display for mode/difficulty */
+        }
+
+        /* Main Phase Button Styling */
+        #next-step-button {
+            display: block;
+            width: 100%;
+            padding: 15px;
+            margin-top: 10px;
+            font-size: 1.2em;
+            cursor: pointer;
+            background-color: #4CAF50; /* Default Green */
+            color: white;
+            border: none;
+            border-radius: 5px;
+            transition: background-color 0.2s ease;
+            line-height: 1.3; /* Adjust line height for two lines */
+            text-align: center;
+        }
+
+            #next-step-button:hover {
+                opacity: 0.9;
+            }
+
+            #next-step-button .button-main-text {
+                font-weight: bold;
+                display: block; /* Ensure it takes its own line */
+            }
+
+            #next-step-button .button-tip-text {
+                font-size: 0.85em;
+                font-weight: normal;
+                display: block; /* Ensure it takes its own line */
+                margin-top: 3px;
+            }
+            /* Style for fatigue warning */
+            #next-step-button.fatigue-warning-active {
+                background-color: #b30000; /* Red for fatigue */
+            }
+
+
+        /* Adventurer Actions Section */
+        .adventurer-actions-container {
+            display: none; /* Hidden by default */
+            background-color: #fdf5f5; /* Light red background for contrast */
+        }
+
+            .adventurer-actions-container h3 {
+                text-align: center;
+                margin-top: 0;
+                color: #7a1f1f;
+            }
+
+        /* Action Buttons Grid */
+        #action-buttons-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr; /* Two equal columns */
+            gap: 10px; /* Space between buttons */
+            margin-bottom: 15px; /* Space before End Turn button */
+        }
+
+        /* Individual Action Button Styling */
+        .action-button {
+            padding: 12px 8px; /* Slightly adjusted padding */
+            font-size: 1em; /* Slightly smaller */
+            cursor: pointer;
+            border: none;
+            border-radius: 5px;
+            transition: background-color 0.2s ease, color 0.2s ease;
+            line-height: 1.3;
+            text-align: center;
+            aspect-ratio: 1 / 0.5; /* Make buttons squarish */
+            display: flex; /* Use flexbox for centering */
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+            .action-button .button-main-text {
+                font-weight: bold;
+                display: block;
+                margin-bottom: 3px;
+            }
+
+            .action-button .button-tip-text {
+                font-size: 0.8em;
+                font-weight: normal;
+                display: block;
+                white-space: normal;
+            }
+
+            /* Action Button Availability Colors */
+            .action-button.button-available {
+                background-color: #4CAF50; /* Green */
+                color: white;
+            }
+
+                .action-button.button-available:hover {
+                    opacity: 0.9;
+                }
+
+            .action-button.button-unavailable {
+                background-color: #dc3545; /* Red */
+                color: white;
+                cursor: not-allowed;
+                opacity: 0.7; /* Slightly fade unavailable buttons */
+            }
+
+        @keyframes flash-red-text {
+            0%, 100% {
+                color: white;
+            }
+            /* Start and end white */
+            50% {
+                color: #ff4d4d;
+            }
+            /* Peak flash color (light red), adjust if needed */
+        }
+
+        /* Class to apply the animation */
+        .flash-fatigue-text {
+            animation: flash-red-text 1.0s ease-in-out; /* Adjust duration (1.0s) as needed */
+            /* Important: Prevent animation from affecting layout if possible */
+            display: inline-block; /* Or block if it doesn't mess up layout */
+        }
+
+        /* End Turn Button (Full Width Below Grid) */
+        #action-end-turn {
+            grid-column: 1 / -1; /* Span full width */
+            background-color: #6c757d;
+            color: white;
+            margin-top: 10px; /* Space above end turn */
+        }
+
+            #action-end-turn:hover {
+                background-color: #5a6268;
+            }
+
+        /* Rules Section Styling */
+        .rules-section {
+            margin-top: 15px;
+            text-align: center;
+            padding-top: 15px;
+            border-top: 1px solid #eee;
+        }
+
+        #rules-toggle {
+            margin-right: 10px;
+        }
+
+        #rules-toggle-label {
+            cursor: pointer;
+            font-size: 0.9em;
+        }
+
+        .general-rules-section {
+            margin-top: 25px; /* Space above the button container */
+            padding-top: 15px; /* Optional padding */
+            border-top: 1px solid #eee; /* Optional separator line */
+            text-align: center; /* Center the button */
+        }
+
+        /* Ensure styles for the button itself are defined (adjust as needed) */
+        #general-rules-button {
+            background-color: #17a2b8; /* Info blue */
+            color: white;
+            padding: 10px 20px; /* Adjust padding if needed */
+            font-size: 1em;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+
+            #general-rules-button:hover {
+                background-color: #138496;
+            }
+
+        /* Optional: Adjust the rules section within the action container */
+        #adventurer-actions-container .rules-section {
+            margin-top: 15px;
+            padding-top: 0; /* Remove top padding */
+            border-top: none; /* Remove top border */
+            text-align: center; /* Keep centering the toggle */
+        }
+
+        /* Modal Styles */
+        .modal {
+            display: none; /* Hidden by default */
+            position: fixed; /* Stay in place */
+            z-index: 1; /* Sit on top */
+            left: 0;
+            top: 0;
+            width: 100%; /* Full width */
+            height: 100%; /* Full height */
+            overflow: auto; /* Enable scroll if needed */
+            background-color: rgba(0,0,0,0.6); /* Black w/ opacity */
+            cursor: pointer; /* Allow clicking anywhere to close */
+        }
+
+        .modal-content {
+            background-color: #fefefe;
+            margin: 15% auto; /* 15% from the top and centered */
+            padding: 20px;
+            border: 1px solid #888;
+            width: 80%; /* Could be more or less, depending on screen size */
+            max-width: 600px;
+            border-radius: 8px;
+            position: relative;
+            cursor: default; /* Prevent clicks inside content from closing */
+            overflow-y: auto; /* Enable vertical scrolling if needed */
+            max-height: 80vh; /* Limit height to ensure scrolling */
+            -webkit-overflow-scrolling: touch; /* Add smooth scrolling for iOS */
+        }
+
+        .modal-close {
+            color: #aaa;
+            position: absolute;
+            top: 10px;
+            right: 20px;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+            .modal-close:hover, .modal-close:focus {
+                color: black;
+                text-decoration: none;
+            }
+
+        .modal h3 {
+            margin-top: 0;
+            color: #5a0f0f;
+        }
+
+        .modal p {
+            margin-bottom: 10px;
+        }
+
+        .modal ul {
+            list-style: disc;
+            margin-left: 20px;
+        }
+
+        .modal .rule-ref {
+            font-size: 0.9em;
+            color: #555;
+            font-style: italic;
+        }
+
+        /* Utility Class */
+        .hidden {
+            display: none !important;
+        }
+        /* Use !important for setup hiding */
+
+    </style>
+</head>
+<body>
+
+    <div id="app">
+        <h1>BOTSE Battle Tracker</h1>
+
+        <div class="setup">
+            <h2>Setup</h2>
+            <!-- Player Count Buttons -->
+            <label>Number of Players:</label>
+            <div class="button-group" id="player-count-options">
+                <button type="button" class="option-button" data-value="1">1</button>
+                <button type="button" class="option-button selected" data-value="2">2</button> <!-- Default selected -->
+                <button type="button" class="option-button" data-value="3">3</button>
+                <button type="button" class="option-button" data-value="4">4</button>
+            </div>
+
+            <!-- Difficulty Buttons -->
+            <label>Difficulty:</label>
+            <div class="button-group" id="difficulty-options">
+                <button type="button" class="option-button selected" data-value="apprentice">Apprentice</button> <!-- Default selected -->
+                <button type="button" class="option-button" data-value="adept">Adept</button>
+                <button type="button" class="option-button" data-value="expert">Expert</button>
+            </div>
+
+            <!-- Battle Mode Buttons -->
+            <label>Battle Mode:</label>
+            <div class="button-group" id="mode-options">
+                <button type="button" class="option-button" data-value="clash">Clash</button>
+                <button type="button" class="option-button selected" data-value="delve">Delve</button> <!-- Default selected -->
+                <button type="button" class="option-button" data-value="dungeon">Dungeon</button>
+            </div>
+
+            <button id="start-battle-button">Start Battle</button>
+        </div>
+
+        <div id="tracker-area" class="hidden">
+            <div id="tracker-info" class="tracker-info tracker-info-flex">
+                <!-- Main Left Block (contains Round, Details, Phase) -->
+                <div class="info-left-column">
+                    <!-- Top Row: Round Block + Details Block -->
+                    <div class="info-top-row">
+                        <!-- Large Square Round Block -->
+                        <div class="round-block">
+                            <span class="round-block-label">Round</span>
+                            <span id="round-block-number" class="round-block-number">-</span> <!-- New ID for JS -->
+                        </div>
+                        <!-- Details Block (Difficulty/Mode) -->
+                        <div class="details-block">
+                            <p id="difficulty-display">Difficulty: <span>-</span></p>
+                            <p id="mode-display">Mode: <span>-</span></p>
+                        </div>
+                    </div>
+                    <!-- Phase Heading (Below Top Row) -->
+                    <p id="phase-display" class="phase-heading"><span>-</span></p>
+                </div>
+
+                <!-- Right Block (Undo Button) -->
+                <div class="info-button-block">
+                    <button id="undo-button" class="info-undo-button" disabled>
+                        <span>Undo</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="controls">
+                <!-- Main Phase Button -->
+                <button id="next-step-button">
+                    <span class="button-main-text">Main Text</span>
+                    <span class="button-tip-text">Tip Text</span>
+                </button>
+            </div>
+
+            <!-- Adventurer Actions (includes grid and rules toggle) -->
+            <div id="adventurer-actions-container" class="adventurer-actions-container">
+                <div id="action-buttons-grid">
+                    <button id="action-move" class="action-button button-available">
+                        <span class="button-main-text">Move</span>
+                        <span class="button-tip-text">Move 1 or 2 times</span>
+                    </button>
+                    <button id="action-engage" class="action-button button-available">
+                        <span class="button-main-text">Engage</span>
+                        <span class="button-tip-text">First Engage is free</span>
+                    </button>
+                    <button id="action-class-ability" class="action-button button-available">
+                        <span class="button-main-text">Class Ability</span>
+                        <span class="button-tip-text">Spend Tenacity</span>
+                    </button>
+                    <button id="action-explore" class="action-button button-available">
+                        <span class="button-main-text">Explore</span>
+                        <span class="button-tip-text">Trigger exploration</span>
+                    </button>
+                    <button id="action-end-turn" class="action-button">
+                        <span class="button-main-text">End Turn</span>
+                        <span class="button-tip-text">Finish actions</span>
+                    </button>
+                </div>
+
+                <!-- Rules Toggle Section (Now inside actions container) -->
+                <div class="rules-section">
+                    <input type="checkbox" id="rules-toggle">
+                    <label for="rules-toggle" id="rules-toggle-label">Enable Rule Popups on Action Buttons</label>
+                </div>
+            </div>
+            <div class="general-rules-section">
+                <button id="general-rules-button">General Rules Ref</button>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- The Modal -->
+    <div id="rules-modal" class="modal">
+        <div class="modal-content">
+            <span class="modal-close">×</span>
+            <h3 id="modal-title">Rule Details</h3>
+            <div id="modal-text">Rule content goes here.</div>
+        </div>
+    </div>
+
+
+    <script>
+        // --- DOM Elements ---
+        const playerCountOptionsDiv = document.getElementById('player-count-options');
+        const difficultyOptionsDiv = document.getElementById('difficulty-options');
+        const modeOptionsDiv = document.getElementById('mode-options');
+        const startBattleButton = document.getElementById('start-battle-button');
+        const setupDiv = document.querySelector('.setup');
+        const trackerAreaDiv = document.getElementById('tracker-area');
+        const roundBlockDiv = document.querySelector('.round-block');
+        const roundBlockNumber = document.getElementById('round-block-number');
+        const phaseDisplay = document.querySelector('#phase-display span');
+        const difficultyDisplay = document.querySelector('#difficulty-display span');
+        const modeDisplay = document.querySelector('#mode-display span');
+        const nextStepButton = document.getElementById('next-step-button');
+        const nextStepButtonMainText = nextStepButton.querySelector('.button-main-text');
+        const nextStepButtonTipText = nextStepButton.querySelector('.button-tip-text');
+        const undoButton = document.getElementById('undo-button');
+        const undoButtonTextSpan = undoButton.querySelector('span');
+        const controlsDiv = document.querySelector('.controls');
+        const adventurerActionsContainer = document.getElementById('adventurer-actions-container');
+        const actionMoveButton = document.getElementById('action-move');
+        const actionEngageButton = document.getElementById('action-engage');
+        const actionClassAbilityButton = document.getElementById('action-class-ability');
+        const actionExploreButton = document.getElementById('action-explore');
+        const actionEndTurnButton = document.getElementById('action-end-turn');
+        const rulesToggle = document.getElementById('rules-toggle');
+        const rulesModal = document.getElementById('rules-modal');
+        const modalContent = document.querySelector('.modal-content');
+        const modalClose = document.querySelector('.modal-close');
+        const modalTitle = document.getElementById('modal-title');
+        const modalText = document.getElementById('modal-text');
+        const generalRulesButton = document.getElementById('general-rules-button');
+        const allActionButtons = document.querySelectorAll('.action-button'); // Get all action buttons
+
+
+        // --- Game State ---
+        let gameState = {
+            battleStarted: false,
+            numberOfPlayers: 2, // Default
+            difficulty: 'adept', // Default
+            battleMode: 'delve', // Default
+            roundNumber: 0,
+            isFatigueRound: false,
+            currentPhase: 'Setup', // 'AdventurerTurn', 'CompanionTurn', 'EnemyTurn', 'EndOfRound' (No StartOfRound)
+            currentAdventurerIndex: -1,
+            currentAdventurerSubStep: 'None', // 'Start', 'Recovery', 'Actions', 'End'
+            adventurerTurnState: {
+                moveCount: 0,
+                engageCount: 0,
+                explored: false,
+                // endedManually: false // Not strictly needed now
+            },
+            history: []
+        };
+
+        // --- Rule Details (Expert Fatigue Added) ---
+        const ruleDetails = {
+            // ... (Keep previous ruleDetails object content) ...
+            // Add/Modify engage rule detail for Expert fatigue
+            engage: `
+                    <h3>Engage Action</h3>
+                    <p>Use skills in battle. Can be done multiple times, limited by dice and fatigue.</p>
+                    <ol>
+                        <li><strong>Gain Fatigue:</strong> Skip for first engage. Gain 1 light fatigue for each *additional* engage action this turn (or <strong>2 light fatigue on Expert difficulty</strong>).</li>
+                        <li><strong>Choose Battle Form:</strong> Declare form (Light, Heavy, Ranged, Magic, Defensive). May change form.</li>
+                        <li><strong>Declare Target (Optional):</strong> Choose 1 target in sight and range (unless ability specifies otherwise).</li>
+                        <li><strong>Gather & Roll Dice:</strong> Roll available skill dice matching form (up to Stamina/Magicka limits) + maybe Combat dice. Can use 1 matching Weapon (↑) item ability.</li>
+                        <li><strong>Resolve Roll:</strong> Determine results, modify, then resolve abilities one by one. Total damage for defense check. Exhaust/drain dice as specified.</li>
+                        <li><strong>Units React:</strong> Trigger any abilities reacting to the engage.</li>
+                    </ol>
+                     <ul>
+                        <li><strong>Restriction:</strong> Cannot Engage if you have performed <strong>two move actions</strong> this turn.</li>
+                         <li><strong>Note:</strong> You can move *before* an engage action. You cannot perform a *second* move action if you have already engaged this turn.</li>
+                     </ul>
+                    <p class='rule-ref'>Ref: Actions - Engage p59-60</p>
+                `,
+            general: `
+                    <h3>Battle Flow Overview</h3>
+                    <p>Follow the steps in order. Each round consists of:</p>
+                    <ul>
+                        <li>Adventurer Turns (each player: Start > Recovery > Actions > End)</li>
+                        <li>Companion Turns (if any)</li>
+                        <li>Enemy Turns</li>
+                        <li>End of Round (check objectives, retreat option, advance round)</li>
+                    </ul>
+                    <p class='rule-ref'>Ref: Round Sequence p57</p>
+                    <h3>Fatigue</h3>
+                     <p>After Round 5, all subsequent rounds are Fatigue Rounds (✔).</p>
+                     <p>At the start of each Adventurer's Turn during a Fatigue Round:</p>
+                     <ul>
+                         <li>Gain 1 overfatigue die.</li>
+                         <li>Take True Damage equal to total overfatigue in cooldown track.</li>
+                         <li>(Reminder appears on the 'Start Turn' button)</li>
+                     </ul>
+                     <p class='rule-ref'>Ref: Start of Round p57</p>
+                `,
+            // Add other details as before...
+            move: `
+                    <h3>Move Action</h3>
+                    <p>Move up to your Stamina stat in adjacent, unoccupied hexes.</p>
+                    <ul>
+                        <li>Max <strong>twice</strong> per turn.</li>
+                        <li><strong>Restriction 1:</strong> If you perform <strong>no engage actions</strong> this turn, you may take a second move action.</li>
+                        <li><strong>Restriction 2:</strong> If you take a <strong>second move action</strong>, you cannot perform any engage actions this turn.</li>
+                        <li><strong>Restriction 3:</strong> Cannot Move if you have performed an Explore action this turn.</li>
+                        <li>Movement can be interrupted by hex effects (e.g., exploration trigger, lockpick). Resolve interruption before continuing move.</li>
+                    </ul>
+                    <p class='rule-ref'>Ref: Actions - Move p59</p>
+                `,
+            classAbility: `
+                    <h3>Class Ability Action</h3>
+                    <p>Spend the required Tenacity to trigger a class ability.</p>
+                    <ul>
+                        <li>Can be done any number of times per turn (if you have Tenacity).</li>
+                        <li>You may gain 1 light fatigue to change battle form *before* resolving the ability.</li>
+                        <li>Non-enduring abilities trigger only once per turn at their specified timing.</li>
+                        <li>Some are not actions (Enduring, Interrupt).</li>
+                    </ul>
+                     <p class='rule-ref'>Ref: Class Ability p61</p>
+                `,
+            explore: `
+                    <h3>Explore Action (Delve Only)</h3>
+                     <p>Available only in Delves.</p>
+                    <ul>
+                        <li><strong>Once per turn.</strong></li>
+                        <li>Count distance to an explorable hex in sight.</li>
+                        <li>If distance <= Stamina, trigger an exploration on that hex.</li>
+                         <li><strong>Restriction 1:</strong> Cannot Explore if you have performed a Move action this turn.</li>
+                         <li><strong>Restriction 2:</strong> Cannot Move if you have performed an Explore action this turn.</li>
+                    </ul>
+                     <p>Automatically Explore the next tile by starting on an explorable hex, or moving onto one. The above restrictions do not apply to this exploration.</p>
+                     <p class='rule-ref'>Ref: Explore p61, Delve Exploration p77</p>
+                `,
+            endAdventurerTurn: `
+                     <h3>End Adventurer Turn</h3>
+                     <p>Final step for the current adventurer.</p>
+                     <ol>
+                         <li>Trigger any "End of Turn" abilities.</li>
+                         <li>Proceed to the next adventurer's turn or the Companion Turn phase if all adventurers have acted.</li>
+                     </ol>
+                      <p class='rule-ref'>Ref: Adventurer Turns p59</p>
+                 `,
+            companionTurn: `
+                    <h3>Companion Turns</h3>
+                    <p>After all adventurers, each companion takes a turn (party chooses order).</p>
+                    <p>Controlled player decides actions (Move, Engage are optional).</p>
+                     <ol>
+                        <li><strong>Start of Turn:</strong> Trigger relevant effects.</li>
+                        <li><strong>Move:</strong> Up to 2 hexes (player chosen, ignores normal AI).</li>
+                        <li><strong>Engage:</strong> Target units (ignores priority icon). Roll companion's Combat Dice. Resolve against targets.</li>
+                         <li><strong>Resolve Skills:</strong> Non-optional skills trigger at specified timing.</li>
+                        <li><strong>End of Turn:</strong> Trigger relevant effects.</li>
+                     </ol>
+                     <p><strong>Undeployed Companions:</strong> If a companion couldn't deploy at setup and an entrance hex is free, deploy them now. They may then take their turn normally.</p>
+                    <p class='rule-ref'>Ref: Companion Turns p91, Round Sequence p57</p>
+                `,
+            enemyTurn: `
+                    <h3>Enemy Turns</h3>
+                    <p>After adventurers and companions, enemies act from highest level to lowest (party breaks ties).</p>
+                     <ol>
+                        <li><strong>Start of Turn:</strong> Trigger effects (e.g., status effects).</li>
+                        <li><strong>Move:</strong> Move up to 2 hexes *only if* no targetable unit is in range. Moves toward closest hex to get a unit in range/sight. (See detailed AI rules).</li>
+                        <li><strong>Engage:</strong> Targets units up to Target value in range/sight, following Priority Icon (party breaks ties). Rolls Combat Dice once, resolves against each target.</li>
+                         <li><strong>Resolve Skills:</strong> Trigger enemy skills as described.</li>
+                        <li><strong>End of Turn:</strong> Trigger effects.</li>
+                     </ol>
+                     <p class='rule-ref'>Ref: Enemy Turns p64, Round Sequence p57</p>
+                `,
+            endOfRound: `
+                    <h3>End of Round</h3>
+                     <ol>
+                        <li><strong>Trigger Effects:</strong> Resolve any "End of Round" abilities.</li>
+                         <li><strong>Check Encounter Complete:</strong> Determine if objectives met (Win/Loss). If yes, battle ends.</li>
+                         <li><strong>Retreat Option:</strong> The party may choose to retreat now. If so, the encounter ends (usually failed).</li>
+                         <li>If battle continues, advance round counter, check for fatigue status, then proceed to Adventurer 1's Start of Turn.</li>
+                     </ol>
+                     <p class='rule-ref'>Ref: Round Sequence p57, End of Battle p86, Retreating p59</p>
+                `
+        };
+
+        // --- History Function (Unchanged from previous fix) ---
+        function saveState() {
+            try {
+                const stateToSave = Object.assign({}, gameState);
+                delete stateToSave.history;
+                const historyEntry = JSON.parse(JSON.stringify(stateToSave));
+                if (gameState.history.length > 10) {
+                    gameState.history.shift();
+                }
+                gameState.history.push(historyEntry);
+            } catch (e) {
+                console.error("Error saving state:", e);
+            }
+        }
+
+        function loadPreviousState() {
+            if (gameState.history.length > 1) {
+                const previousStateSnapshot = gameState.history.pop();
+                const currentHistory = gameState.history; // Preserve current history array
+                // Restore state, ensuring the 'history' property points to the correct array
+                gameState = { ...previousStateSnapshot, history: currentHistory };
+                updateDisplay();
+            }
+        }
+
+        // --- UI Update Function ---
+        function updateDisplay() {
+            if (gameState.isFatigueRound) {
+                roundBlockNumber.textContent = '✔'; // Use checkmark for fatigue
+                roundBlockNumber.classList.add('fatigue-icon');
+                roundBlockDiv.classList.add('fatigue-round-active');
+            } else {
+                roundBlockNumber.textContent = gameState.roundNumber;
+                roundBlockNumber.classList.remove('fatigue-icon');
+                roundBlockDiv.classList.remove('fatigue-round-active');
+            }
+            phaseDisplay.textContent = getPhaseDescription(gameState.currentPhase, gameState.currentAdventurerSubStep);
+            difficultyDisplay.textContent = gameState.difficulty;
+            modeDisplay.textContent = gameState.battleMode;
+
+            const showActions = (gameState.currentPhase === 'AdventurerTurn' && gameState.currentAdventurerSubStep === 'Actions');
+            adventurerActionsContainer.style.display = showActions ? 'block' : 'none';
+            //nextStepButton.style.display = showActions ? 'none' : 'block';
+            controlsDiv.style.display = showActions ? 'none' : 'block';
+
+            const { main: mainPhaseText, tip: mainPhaseTip, isFatigueStart } = getNextStepButtonContent();
+            nextStepButtonMainText.textContent = mainPhaseText;
+            nextStepButtonTipText.textContent = mainPhaseTip;
+            nextStepButton.classList.toggle('fatigue-warning-active', isFatigueStart);
+
+            if (showActions) {
+                // --- Action Button Availability Logic ---
+                const moveCount = gameState.adventurerTurnState.moveCount;
+                const engageCount = gameState.adventurerTurnState.engageCount;
+                const explored = gameState.adventurerTurnState.explored;
+                const isExpert = gameState.difficulty === 'expert';
+
+                // Can move if not explored AND (moved 0 times OR (moved 1 time AND engaged 0 times))
+                const canMove = !explored && (moveCount === 0 || (moveCount === 1 && engageCount === 0));
+                // Can engage if not moved twice
+                const canEngage = moveCount < 2;
+                // Can explore if Delve mode, not explored, and not moved
+                const canExplore = gameState.battleMode === 'delve' && !explored && moveCount === 0;
+
+                setButtonAvailability(actionMoveButton, canMove);
+                setButtonAvailability(actionEngageButton, canEngage);
+                setButtonAvailability(actionClassAbilityButton, true); // always possible if player chooses
+                setButtonAvailability(actionExploreButton, canExplore);
+                actionExploreButton.classList.toggle('hidden', gameState.battleMode !== 'delve');
+
+
+                // --- Action Button Tip Logic ---
+                const moveTipSpan = actionMoveButton.querySelector('.button-tip-text');
+                const engageTipSpan = actionEngageButton.querySelector('.button-tip-text');
+
+                // Move Tip
+                if (!canMove) {
+                    if (explored) moveTipSpan.textContent = "Cannot move after Explore";
+                    else if (moveCount >= 2) moveTipSpan.textContent = "Moved twice";
+                    else if (moveCount === 1 && engageCount > 0) moveTipSpan.textContent = "Cannot move again"; // Moved once, then engaged
+                    else moveTipSpan.textContent = "Unavailable"; // Default unavailable
+                } else {
+                    if (moveCount === 0 && engageCount === 0) moveTipSpan.textContent = "Move once or twice";
+                    else if (moveCount === 0 && engageCount > 0) moveTipSpan.textContent = "Can only Move once after an Engage"; // Moved once, then engaged
+                    else if (moveCount === 1) {
+                        moveTipSpan.innerHTML = "Move again<br>Disables Engage"; // Only possible if engageCount is 0
+                        engageTipSpan.textContent = "Disables second Move";
+                    }
+                }
+
+                // Engage Tip
+                if (!canEngage) {
+                    engageTipSpan.textContent = "Cannot Engage after 2 Moves";
+                } else {
+                    if (engageCount === 0) {
+                        if (moveCount === 1) {
+                            engageTipSpan.innerHTML = `First Engage is free<br>Disables second Move`;
+                        } else {
+                            engageTipSpan.textContent = `First Engage is free`;
+                        }
+                    } else {
+                        const fatigueCostSubsequent = isExpert ? "2" : "1";
+                        if (moveCount === 1 && canMove) {
+                            engageTipSpan.innerHTML = `Gain ${fatigueCostSubsequent} fatigue<br>Disables second Move`;
+                        } else {
+                            engageTipSpan.textContent = `Gain ${fatigueCostSubsequent} fatigue`;
+                        }
+                    }
+                }
+            }
+            const historyExists = gameState.history.length > 1;
+            const historyCount = gameState.history.length - 1; // Get the current count
+
+            undoButton.disabled = !historyExists;
+
+            // Update the text inside the button's span based on the count
+            if (historyExists) {
+                undoButtonTextSpan.textContent = `Undo (${historyCount})`; // Display count
+            } else {
+                undoButtonTextSpan.textContent = 'Undo'; // Reset to default when hidden/disabled
+            }
+        }
+
+        function setButtonAvailability(button, isAvailable) {
+            button.classList.toggle('button-available', isAvailable);
+            button.classList.toggle('button-unavailable', !isAvailable);
+        }
+
+        function getPhaseDescription(phase, subStep) {
+            if (phase === 'AdventurerTurn') {
+                return `Player ${gameState.currentAdventurerIndex + 1} - ${subStep}`;
+            }
+            switch (phase) {
+                case 'CompanionTurn': return "Companion's Turn";
+                case 'EnemyTurn': return "Enemy's Turn";
+                case 'EndOfRound': return "End of Round";
+                case 'Setup': return "Setup";
+                default: return phase; // Fallback for unknown phases
+            }
+            return phase; // Simpler phase display
+        }
+
+        function getNextStepButtonContent() {
+            let main = "Next Step";
+            let tip = "";
+            let isFatigueStart = false; // Flag for fatigue warning styling
+
+            const phase = gameState.currentPhase;
+            const subStep = gameState.currentAdventurerSubStep;
+
+            if (phase === 'AdventurerTurn') {
+                switch (subStep) {
+                    case 'Start':
+                        main = "Start Turn";
+                        if (gameState.isFatigueRound) {
+                            tip = "FATIGUE: Gain Overfatigue & Take True Damage!";
+                            isFatigueStart = true; // Turn button red
+                        } else {
+                            tip = "Trigger 'Start of Turn' abilities.";
+                        }
+                        break;
+                    case 'Recovery':
+                        main = "Recovery";
+                        tip = "Remove dice equal to Cooldown stat.";
+                        break;
+                    // Actions phase uses specific buttons
+                    case 'End':
+                        main = "End Turn Confirmed";
+                        tip = "Proceeding to next player or phase...";
+                        break;
+                }
+            } else if (phase === 'CompanionTurn') {
+                main = "Companion's Turn";
+                tip = "Start > Move > Engage > Skills > End. Party chooses order.";
+            } else if (phase === 'EnemyTurn') {
+                main = "Enemy's Turn";
+                tip = "Start > Move > Engage > Skills > End. Highest level first.";
+            } else if (phase === 'EndOfRound') {
+                main = "End of Round";
+                tip = "Trigger effects. Check objective. Retreat? Advance Round.";
+            }
+
+            return { main, tip, isFatigueStart };
+        }
+
+
+        // --- Core Logic ---
+        function advancePhase() {
+            saveState(); // Save current state before changing
+
+            const currentPhase = gameState.currentPhase;
+            const currentSubStep = gameState.currentAdventurerSubStep;
+            const numPlayers = gameState.numberOfPlayers;
+
+            if (currentPhase === 'Setup') { // Initial start
+                // Handled by startBattleButton listener
+                console.error("AdvancePhase called during Setup unexpectedly");
+                return;
+            } else if (currentPhase === 'AdventurerTurn') {
+                if (currentSubStep === 'Start') {
+                    gameState.currentAdventurerSubStep = 'Recovery';
+                } else if (currentSubStep === 'Recovery') {
+                    gameState.currentAdventurerSubStep = 'Actions';
+                } else if (currentSubStep === 'Actions') {
+                    // This case is handled by the "End Turn" action button
+                    console.error("Should not reach here via nextStepButton during Actions phase");
+                } else if (currentSubStep === 'End') {
+                    // Move to next player or next phase
+                    if (gameState.currentAdventurerIndex < numPlayers - 1) {
+                        gameState.currentAdventurerIndex++;
+                        gameState.currentAdventurerSubStep = 'Start';
+                        resetAdventurerTurnState();
+                    } else {
+                        // All adventurers done
+                        gameState.currentPhase = 'CompanionTurn';
+                        gameState.currentAdventurerIndex = -1; // Reset index
+                        gameState.currentAdventurerSubStep = 'None';
+                    }
+                }
+            } else if (currentPhase === 'CompanionTurn') {
+                gameState.currentPhase = 'EnemyTurn';
+            } else if (currentPhase === 'EnemyTurn') {
+                gameState.currentPhase = 'EndOfRound';
+            } else if (currentPhase === 'EndOfRound') {
+                // End of Round actions: Advance round, check fatigue, go to first player
+                gameState.roundNumber++;
+                gameState.isFatigueRound = gameState.roundNumber > 5;
+
+                gameState.currentPhase = 'AdventurerTurn';
+                gameState.currentAdventurerIndex = 0; // Start with Player 1
+                gameState.currentAdventurerSubStep = 'Start';
+                resetAdventurerTurnState();
+            }
+
+            updateDisplay();
+        }
+
+        function handleAdventurerAction(actionType, buttonElement) {
+            // Standard check for correct phase/substep
+            if (gameState.currentPhase !== 'AdventurerTurn' || gameState.currentAdventurerSubStep !== 'Actions') {
+                console.log("Action attempted outside of Adventurer Actions phase.");
+                return;
+            }
+
+            // --- Step 1: Check if the ONLY purpose is to show rules ---
+            if (rulesToggle.checked) {
+                // If the toggle is checked, *always* show the popup for the clicked action,
+                // regardless of whether the action is currently available or not.
+                showRulePopup(actionType);
+                return; // Stop processing here; we only wanted to show the rules.
+            }
+
+            // --- Step 2: If not showing rules, check if the action is actually allowed ---
+            if (buttonElement.classList.contains('button-unavailable')) {
+                // If the rules toggle wasn't checked, and the button is red (unavailable),
+                // do nothing. The action is blocked by game rules.
+                console.log(`Action ${actionType} blocked by rules (button unavailable).`);
+                return;
+            }
+
+            // --- Step 3: If rules are off AND action is available, proceed ---
+            saveState(); // Save state *before* performing the action
+
+            // Perform the actual game state change based on the action
+            switch (actionType) {
+                case 'move':
+                    gameState.adventurerTurnState.moveCount++;
+                    console.log(`Player ${gameState.currentAdventurerIndex + 1} performed Move #${gameState.adventurerTurnState.moveCount}`);
+                    break;
+                case 'engage':
+                    gameState.adventurerTurnState.engageCount++;
+                    const fatigueGain = (gameState.difficulty === 'expert' ? 2 : 1);
+                    const fatigueMsg = gameState.adventurerTurnState.engageCount > 1 ? ` (Remember ${fatigueGain} fatigue!)` : "";
+                    console.log(`Player ${gameState.currentAdventurerIndex + 1} performed Engage #${gameState.adventurerTurnState.engageCount}${fatigueMsg}`);
+                    if (gameState.adventurerTurnState.engageCount > 1) {
+                        const engageTipSpan = actionEngageButton.querySelector('.button-tip-text');
+                        // Temporarily add the flash class
+                        engageTipSpan.classList.add('flash-fatigue-text');
+                        // Remove the class after the animation duration (700ms)
+                        // so it can be triggered again on the next click
+                        setTimeout(() => {
+                            // Check if the element still exists before removing class
+                            if (engageTipSpan) {
+                                engageTipSpan.classList.remove('flash-fatigue-text');
+                            }
+                        }, 1000); // MUST match the animation duration in CSS
+                    }
+                    break;
+                case 'classAbility':
+                    // No specific state change tracked here, just log
+                    console.log(`Player ${gameState.currentAdventurerIndex + 1} used Class Ability`);
+                    break;
+                case 'explore':
+                    // This case is now only reached if:
+                    // 1. Rules toggle is OFF
+                    // 2. Explore button was GREEN (available: Delve mode, not moved, not explored)
+                    gameState.adventurerTurnState.explored = true;
+                    console.log(`Player ${gameState.currentAdventurerIndex + 1} performed Explore`);
+                    // The consequence (disabling Move) happens in updateDisplay
+                    break;
+                case 'endTurn':
+                    console.log(`Player ${gameState.currentAdventurerIndex + 1} ends turn manually.`);
+                    gameState.currentAdventurerSubStep = 'End';
+                    advancePhase(); // End Turn directly advances phase
+                    return; // Exit function early as advancePhase calls updateDisplay
+            }
+
+            // --- Step 4: Update the display to reflect the state change ---
+            updateDisplay();
+        }
+
+        function resetAdventurerTurnState() {
+            gameState.adventurerTurnState = {
+                moveCount: 0,
+                engageCount: 0,
+                explored: false
+            };
+        }
+
+
+        function showRulePopup(ruleKey) {
+            const detail = ruleDetails[ruleKey];
+            if (detail) {
+                modalTitle.textContent = getPopupTitle(ruleKey);
+                modalText.innerHTML = detail; // Use innerHTML to render basic HTML in rules
+                rulesModal.style.display = "block";
+            } else {
+                console.warn("Rule details not found for key: " + ruleKey);
+                // Optionally show a generic message if rule details are missing
+                // modalTitle.textContent = "Rule Info";
+                // modalText.innerHTML = "<p>Details for this action are not available.</p>";
+                // rulesModal.style.display = "block";
+            }
+        }
+
+        function getPopupTitle(ruleKey) {
+            switch (ruleKey) {
+                case 'move': return 'Move Action Rules';
+                case 'engage': return 'Engage Action Rules';
+                case 'classAbility': return 'Class Ability Rules';
+                case 'explore': return 'Explore Action Rules';
+                case 'startOfRound': return 'Start of Round Rules'; 
+                case 'adventurerTurn': return 'Adventurer Turn Rules';
+                case 'companionTurn': return 'Companion Turn Rules';
+                case 'enemyTurn': return 'Enemy Turn Rules';
+                case 'endOfRound': return 'End of Round Rules';
+                case 'general': return 'General Battle Rules';
+                case 'endTurn': return 'End Adventurer Turn';
+                default: return 'Rule Details';
+            }
+        }
+
+
+        // --- Event Listeners ---
+        function handleOptionSelection(event) {
+            const clickedButton = event.target.closest('.option-button');
+            if (!clickedButton) return; // Exit if click wasn't on a button
+
+            const buttonGroup = clickedButton.parentElement;
+            const buttonsInGroup = buttonGroup.querySelectorAll('.option-button');
+            const newValue = clickedButton.dataset.value; // Get value from data attribute
+
+            // Deselect all buttons in this group
+            buttonsInGroup.forEach(btn => btn.classList.remove('selected'));
+
+            // Select the clicked button
+            clickedButton.classList.add('selected');
+
+            let groupType = ''; // For debugging log
+            if (buttonGroup.id === 'player-count-options') groupType = 'Player Count';
+            else if (buttonGroup.id === 'difficulty-options') groupType = 'Difficulty';
+            else if (buttonGroup.id === 'mode-options') groupType = 'Mode';
+            console.log(`Selected ${groupType}: ${newValue}`);
+        }
+
+        playerCountOptionsDiv.addEventListener('click', handleOptionSelection);
+        difficultyOptionsDiv.addEventListener('click', handleOptionSelection);
+        modeOptionsDiv.addEventListener('click', handleOptionSelection);
+        // Add touchstart listeners if needed for iOS responsiveness, preventing default
+        playerCountOptionsDiv.addEventListener('touchstart', (e) => {
+            if (e.target.closest('.option-button')) { e.preventDefault(); handleOptionSelection(e); }
+        });
+        difficultyOptionsDiv.addEventListener('touchstart', (e) => {
+            if (e.target.closest('.option-button')) { e.preventDefault(); handleOptionSelection(e); }
+        });
+        modeOptionsDiv.addEventListener('touchstart', (e) => {
+            if (e.target.closest('.option-button')) { e.preventDefault(); handleOptionSelection(e); }
+        });
+
+        // UPDATED: Start Battle Button Listener
+        startBattleButton.addEventListener('click', () => {
+            // Find the selected buttons and get their values
+            const selectedPlayerButton = playerCountOptionsDiv.querySelector('.option-button.selected');
+            const selectedDifficultyButton = difficultyOptionsDiv.querySelector('.option-button.selected');
+            const selectedModeButton = modeOptionsDiv.querySelector('.option-button.selected');
+
+            // Should always find one, but add checks just in case
+            const playerCountValue = selectedPlayerButton ? parseInt(selectedPlayerButton.dataset.value, 10) : 2;
+            const difficultyValue = selectedDifficultyButton ? selectedDifficultyButton.dataset.value : 'adept';
+            const modeValue = selectedModeButton ? selectedModeButton.dataset.value : 'delve';
+
+            // saveState(); // Maybe remove initial save here too
+            gameState.battleStarted = true;
+            gameState.numberOfPlayers = playerCountValue;
+            gameState.difficulty = difficultyValue;
+            gameState.battleMode = modeValue;
+            gameState.roundNumber = 1;
+            gameState.isFatigueRound = false;
+            gameState.currentPhase = 'AdventurerTurn';
+            gameState.currentAdventurerIndex = 0;
+            gameState.currentAdventurerSubStep = 'Start';
+            resetAdventurerTurnState();
+
+            setupDiv.classList.add('hidden');
+            trackerAreaDiv.classList.remove('hidden');
+            updateDisplay();
+        });
+        // Add corresponding touchstart listener for Start Battle if desired
+        startBattleButton.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            // Find the selected buttons and get their values
+            const selectedPlayerButton = playerCountOptionsDiv.querySelector('.option-button.selected');
+            const selectedDifficultyButton = difficultyOptionsDiv.querySelector('.option-button.selected');
+            const selectedModeButton = modeOptionsDiv.querySelector('.option-button.selected');
+
+            // Should always find one, but add checks just in case
+            const playerCountValue = selectedPlayerButton ? parseInt(selectedPlayerButton.dataset.value, 10) : 2;
+            const difficultyValue = selectedDifficultyButton ? selectedDifficultyButton.dataset.value : 'adept';
+            const modeValue = selectedModeButton ? selectedModeButton.dataset.value : 'delve';
+
+            // saveState(); // Maybe remove initial save here too
+            gameState.battleStarted = true;
+            gameState.numberOfPlayers = playerCountValue;
+            gameState.difficulty = difficultyValue;
+            gameState.battleMode = modeValue;
+            gameState.roundNumber = 1;
+            gameState.isFatigueRound = false;
+            gameState.currentPhase = 'AdventurerTurn';
+            gameState.currentAdventurerIndex = 0;
+            gameState.currentAdventurerSubStep = 'Start';
+            resetAdventurerTurnState();
+
+            setupDiv.classList.add('hidden');
+            trackerAreaDiv.classList.remove('hidden');
+            updateDisplay();
+        });
+
+        nextStepButton.addEventListener('click', advancePhase);
+        nextStepButton.addEventListener('touchstart', (e) => {
+            e.preventDefault(); // Prevent double-firing
+            advancePhase();
+        });
+
+        undoButton.addEventListener('click', loadPreviousState);
+        undoButton.addEventListener('touchstart', (e) => {
+            e.preventDefault(); // Prevent double-firing
+            loadPreviousState();
+        });
+
+        // Adventurer Action Button Listeners
+        actionMoveButton.addEventListener('click', (e) => handleAdventurerAction('move', e.currentTarget));
+        actionMoveButton.addEventListener('touchstart', (e) => {
+            e.preventDefault(); // Prevent double-firing
+            handleAdventurerAction('move', e.currentTarget);
+        });
+        actionEngageButton.addEventListener('click', (e) => handleAdventurerAction('engage', e.currentTarget));
+        actionEngageButton.addEventListener('touchstart', (e) => {
+            e.preventDefault(); // Prevent double-firing
+            handleAdventurerAction('engage', e.currentTarget);
+        });
+        actionClassAbilityButton.addEventListener('click', (e) => handleAdventurerAction('classAbility', e.currentTarget));
+        actionClassAbilityButton.addEventListener('touchstart', (e) => {
+            e.preventDefault(); // Prevent double-firing
+            handleAdventurerAction('classAbility', e.currentTarget);
+        });
+        actionExploreButton.addEventListener('click', (e) => handleAdventurerAction('explore', e.currentTarget)); // Explore only shows popup now
+        actionExploreButton.addEventListener('touchstart', (e) => {
+            e.preventDefault(); // Prevent double-firing
+            handleAdventurerAction('explore', e.currentTarget);
+        });
+        actionEndTurnButton.addEventListener('click', (e) => {
+            if (rulesToggle.checked) {
+                showRulePopup('endTurn');
+            } else {
+                handleAdventurerAction('endTurn', e.currentTarget);
+            }
+        });
+        actionEndTurnButton.addEventListener('touchstart', (e) => {
+            e.preventDefault(); // Prevent double-firing
+            if (rulesToggle.checked) {
+                showRulePopup('endTurn');
+            } else {
+                handleAdventurerAction('endTurn', e.currentTarget);
+            }
+        });
+
+        // General Rules Button
+        generalRulesButton.addEventListener('click', () => showRulePopup('general'));
+        generalRulesButton.addEventListener('touchstart', (e) => {
+            e.preventDefault(); // Prevent double-firing
+            showRulePopup('general');
+        });
+
+        // Modal Close Logic
+        function closeModal() {
+            rulesModal.style.display = "none";
+            // Uncheck toggle when modal is closed
+            if (rulesToggle.checked) {
+                rulesToggle.checked = false;
+            }
+        }
+        modalClose.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            closeModal();
+        });
+
+        modalClose.onclick = closeModal; // Click X
+        rulesModal.onclick = (event) => { // Click background
+            if (event.target === rulesModal) { // Only if clicking the background itself
+                closeModal();
+            }
+        };
+        rulesModal.addEventListener('touchend', (e) => {
+            if (e.target === rulesModal) {
+                e.preventDefault();
+                closeModal();
+            }
+        });
+
+        // --- Initial Setup ---
+        trackerAreaDiv.classList.add('hidden');
+        setupDiv.classList.remove('hidden');
+
+    </script>
+
+</body>
+</html>
